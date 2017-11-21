@@ -1426,17 +1426,396 @@ public final class String implements java.io.Serializable,Comparable<String>,Cha
         return joiner.toString();
     }
 
-    // 2561
+    /**
+     * @Author：zhuangfei
+     * @Description：将所有的字符对象按照指定的locale规则转换为小写
+     * locale ：指定转换规则
+     * @Date：16:30 2017/11/16
+     */
+    public String toLowerCase(Locale locale) {
+        if(locale == null) {
+            throw new NullPointerException();  // 抛出空指针异常
+        }
+
+        int firstUpper;
+        final int len = value.length;
+
+        // 现在检查是否有需要更改的字符
+        scan: {
+            for(firstUpper = 0;firstUpper < len;) {
+                char c = value[firstUpper];
+                if((c>=Character.MIN_HIGH_SURROGATE) && (c<= Character.MAX_HIGH_SURROGATE)) {
+                    int supplChar = codePointAt(firstUpper);
+                    if(supplChar != Character.toLowerCase(supplChar)) {
+                        break scan;
+                    }
+                    firstUpper += Character.charCount(supplChar);
+                } else {
+                    if(c != Character.toLowerCase(c)) {
+                        break scan;
+                    }
+                    firstUpper++;
+                }
+            }
+            return this;
+        }
+        char[] result = new char[len];
+        int resultOffset = 0; // 结果可能会增加，所以 i+resultOffset 是结果中的写入位置
+
+        System.arraycopy(value, 0, result, 0, firstUpper);
+
+        String lang = locale.getLanguage();
+        boolean localeDependent = (lang == "tr" || lang == "az" || lang == "lt");
+        char[] lowerCharArray;
+        int lowerChar,srcChar;
+        int srcCount;
+        for(int i = firstUpper; i < len;i += srcCount) {
+            srcChar = (int)value[i];
+            if((char)srcChar >= Character.MIN_HIGH_SURROGATE &&
+                    (char)srcChar <= Character.MAX_HIGH_SURROGATE) {
+                srcChar = codePointAt(i);
+                srcCount = Character.charCount(srcChar);
+            } else {
+                srcCount = 1;
+            }
+            if(localeDependent ||
+                    srcChar == '\u03A3' || // 希腊大写字母σ
+                    srcChar == '\u0130') { // 拉丁大写I和上面的点
+                lowerChar = ConditionalSpecialCasing.toLowerCaseEx(this, i, locale);
+            } else {
+                lowerChar = Character.toLowerCase(srcChar);
+            }
+            if((lowerChar == Character.ERROR) || (lowerChar >= Character.MIN_SUPPLEMENTARY_CODE_POINT)) {
+                if(lowerChar == Character.ERROR) {
+                    lowerCharArray = ConditionalSpecialCasing.toLowerCaseCharArray(this, i, locale);
+                } else if(srcCount == 2) {
+                    resultOffset += Character.toChars(lowerChar, result, i+resultOffset) - srcCount;
+                    continue;
+                } else {
+                    lowerCharArray = Character.toChars(lowerChar);
+                }
+
+                // 如果需要返回的结果
+                int mapLen = lowerCharArray.length;
+                if(mapLen >  srcCount) {
+                    char[] result2 = new char[result.length + mapLen - srcCount];
+                    System.arraycopy(result, 0, result2, 0, i + resultOffset);
+                    result = result2;
+                }
+                for(int x = 0; x < mapLen; ++x) {
+                    result[i + resultOffset + x] = lowerCharArray[x];
+                }
+                resultOffset += (mapLen - srcCount);
+            } else {
+                result[i + resultOffset] = (char)lowerChar;
+            }
+        }
+        return new String(result, 0, len + resultOffset);
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：不指定转换规则时，以默认规则把所有字符转换为小写
+     * @Date：17:01 2017/11/16
+     */
+    public String toLowerCase() {
+        return toLowerCase(Locale.getDefault());
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：将指定对象的字符按照指定的Locale规则转换成大写
+     * locale ：指定规则
+     * @Date：17:03 2017/11/16
+     */
+    public String toUpperCase(Locale locale) {
+        if (locale == null) {
+            throw new NullPointerException(); // 抛出空指针异常
+        }
+
+        int firstLower;
+        final int len = value.length;
+        // 现在检查是否有需要更改的字符
+        scan: {
+            for (firstLower = 0; firstLower < len;) {
+                int c = (int) value[firstLower];
+                int srcCount;
+                if ((c >= Character.MIN_HIGH_SURROGATE) && (c <= Character.MAX_HIGH_SURROGATE)) {
+                    c = codePointAt(firstLower);
+                    srcCount = Character.charCount(c);
+                } else {
+                    srcCount = 1;
+                }
+                int upperCaseChar = Character.toUpperCaseEx(c);
+                if (upperCaseChar == Character.ERROR || (c != upperCaseChar)) {
+                    break scan;
+                }
+                firstLower += srcCount;
+            }
+            return this;
+        }
+        // 结果可能会增加，所以 i+resultOffset 是结果中的写入位置
+        int resultOffset = 0;
+        char[] result = new char[len];
+
+        // 只复制前几个大写字母
+        System.arraycopy(value, 0, result, 0, firstLower);
+
+        String lang = locale.getLanguage();
+        boolean localeDependent = (lang == "tr" || lang == "az" || lang == "lt");
+        char[] upperCharArray;
+        int upperChar, srcChar;
+        int srcCount;
+        for (int i = firstLower; i < len; i += srcCount) {
+            srcChar = (int) value[i];
+            if ((char) srcChar >= Character.MIN_HIGH_SURROGATE && (char) srcChar <= Character.MAX_HIGH_SURROGATE) {
+                srcChar = codePointAt(i);
+                srcCount = Character.charCount(srcChar);
+            } else {
+                srcCount = 1;
+            }
+            if (localeDependent) {
+                upperChar = ConditionalSpecialCasing.toUpperCaseEx(this, i, locale);
+            } else {
+                upperChar = Character.toUpperCaseEx(srcChar);
+            }
+            if ((upperChar == Character.ERROR) || (upperChar >= Character.MIN_SUPPLEMENTARY_CODE_POINT)) {
+                if (upperChar == Character.ERROR) {
+                    if (upperChar == Character.ERROR) {
+                        if (localeDependent) {
+                            upperCharArray = ConditionalSpecialCasing.toUpperCaseCharArray(this, i, locale);
+                        } else {
+                            upperCharArray = Character.toUpperCaseCharArray(srcChar);
+                        }
+                    } else if (srcCount == 2) {
+                        resultOffset += Character.toChars(upperChar, result, i + resultOffset) - srcCount;
+                        continue;
+                    } else {
+                        upperCharArray = Character.toChars(upperChar);
+                    }
+
+                    // 返回结果值
+                    int mapLen = upperCharArray.length;
+                    if (mapLen > srcCount) {
+                        char[] result2 = new char[result.length + mapLen - srcCount];
+                        System.arraycopy(result, 0, result2, 0, i + resultOffset);
+                        result = result2;
+                    }
+                    for (int x = 0; x < mapLen; ++x) {
+                        result[i + resultOffset + x] = upperCharArray[x];
+                    }
+                    resultOffset += (mapLen - srcCount);
+                }
+            } else {
+                result[i + resultOffset] = (char) upperChar;
+            }
+        }
+        return new String(result, 0, len + resultOffset);
+    }
+    
+    /**
+     * @Author：zhuangfei
+     * @Description：将指定对象中的字符按照默认规则全部转换成大写
+     * @Date：17:48 2017/11/21
+     */
+    public String toUpperCase() {
+        return toUpperCase();
+    }
+    
+    /**
+     * @Author：zhuangfei
+     * @Description：去掉指定字符串前，中，后所有的空格
+     * @Date：17:55 2017/11/21
+     */
+    public String trim() {
+        int len = value.length;
+        int st = 0;
+        char[] val = value;
+        while((st < len) && (val[st] <= ' ')) {
+            st++;
+        }
+        while((st < len) && (val[len-1] <= ' ')) {
+            len--;
+        }
+        return ((st > 0) || (len < value.length))?substring(st, len) : this;
+    }
+    
+    /**
+     * @Author：zhuangfei
+     * @Description：返回指定对象本身的String格式
+     * @Date：17:59 2017/11/21
+     */
+    public String toString() {
+        return this;
+    }
+    
+    /**
+     * @Author：zhuangfei
+     * @Description：返回指定对象的char[]格式
+     * @Date：17:59 2017/11/21
+     */
+    public char[] toCharArray() {
+        // 不能直接使用数组，考虑到类的初始化问题需要先复制数组
+        char[] result = new char[value.length];
+        System.arraycopy(value, 0, result, 0, value.length);
+        return result;
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：返回指定对象的格式化字符串
+     * format ：指定对象
+     * args ：需要格式化的方式 栗：16进制，10进制
+     * PS ：如果指定的字符包含有非法的字符，会抛出 java.util.IllegaIFormatException (字符格式异常)
+     * @Date：18:02 2017/11/21
+     */
+    public static String format(String format, Object... args) {
+        return new Formatter().format(format, args).toString();
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：使用指定的语言环境，格式化对象为指定的格式
+     * l ：指定的语言
+     * format ：指定对象
+     * args ：需要格式化的方式 栗：16进制，10进制
+     * PS ：如果指定的字符包含有非法的字符，会抛出 java.util.IllegaIFormatException (字符格式异常)
+     * @Date：18:09 2017/11/21
+     */
+    public static String format(Locale l, String format, Object... args) {
+        return new Formatter(l).format(format, args).toString();
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：返回指定对象的String格式，空返回null
+     * obj ：指定对象
+     * @Date：18:12 2017/11/21
+     */
+    public static String valueOf(Object obj) {
+        return(obj == null)?"null":obj.toString();
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：返回char[]的String格式
+     * data[] ：指定的char[]
+     * @Date：18:13 2017/11/21
+     */
+    public static String valueOf(char data[]) {
+        return new String(data);
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：返回指定char[]指定开始位到结束位的String格式
+     * data[] ：指定的char[]
+     * offset ：开始位置
+     * count ： 结束位置
+     * PS ：如果指定的位置超出了数组的长度，会抛出 IndexOutOfBoundsException(数组下标越界异常)
+     * @Date：18:15 2017/11/21
+     */
+    public static String valueOf(char[] data, int offset, int count) {
+        return new String(data, offset, count);
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：从指定数组中复制指定的开始位到结束位并转换为String格式返回
+     * data ：指定数组
+     * offset ：开始位置
+     * count ：结束位置
+     * PS ：如果指定的位置超出了数组的长度，会抛出 IndexOutOfBoundsException(数组下标越界异常)
+     * @Date：18:18 2017/11/21
+     */
+    public static String copyValueOf(char[] data, int offset, int count) {
+        return new String(data, offset, count);
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：把指定的数组转换为String格式返回
+     * data ：char[]
+     * @Date：18:20 2017/11/21
+     */
+    public static String copyValueOf(char[] data) {
+        return new String(data);
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：根据传入的参数返回 true-true,false-false
+     * b ：true OR false
+     * @Date：18:21 2017/11/21
+     */
+    public static String valueeOf(boolean b) {
+        return b?"true":"false";
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：把传入的char[]转换成String格式返回
+     * c ：char[]
+     * @Date：18:23 2017/11/21
+     */
+    public static String valueOf(char c) {
+        char data[] = {c};
+        return new String(data, true);
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：把传入的int数值转换为String返回
+     * i ：数值
+     * @Date：18:25 2017/11/21
+     */
+    public static String valueOf(int i) {
+        return Integer.toString(i);
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：把传入的long数值转换为String格式返回
+     * l ：数值
+     * @Date：18:26 2017/11/21
+     */
+    public static String valueOf(long l) {
+        return Long.toString(l);
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：把传入的单精度数值转换为String格式返回
+     * f ：数值
+     * @Date：18:27 2017/11/21
+     */
+    public static String valueOf(float f) {
+        return Float.toString(f);
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：把传入的双精度数值转换为String格式返回
+     * d ：数值
+     * @Date：18:28 2017/11/21
+     */
+    public static String valueOf(Double d) {
+        return Double.toString(d);
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：如果常量池中存在当前字符串，就直接返回当前字符串，如果不包含当前字符串
+     *                  ，会先把此字符串放入常量池，再返回
+     * @Date：18:30 2017/11/21
+     */
+    public native String intern();
+
     @Override
     protected Object clone() throws CloneNotSupportedException {
         return super.clone();
     }
-
     
-    @Override
-    public String toString() {
-        return super.toString();
-    }
 
     @Override
     protected void finalize() throws Throwable {
