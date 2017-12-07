@@ -290,6 +290,7 @@ public class Integer extends Number implements Comparable<Integer> {
      *              PS：s 的长度不能超过7位，否则也会抛出异常
      *  s ：指定转化的参数
      *  radix ：转换为多少进制
+     *  PS：会抛出 NumberFormatException 数字格式异常
      * @Date：15:25 2017/11/30
      */
     public static int parseInt(String s, int radix) throws NumberFormatException {
@@ -358,36 +359,362 @@ public class Integer extends Number implements Comparable<Integer> {
      * @Author：zhuangfei
      * @Description：默认返回指定对象的十进制结果
      * s ：指定转换的参数
+     * PS：会抛出 NumberFormatException 数字格式异常
      * @Date：16:10 2017/11/30
      */
     public static int parseInt(String s) throws NumberFormatException{
         return parseInt(s, 10);
     }
 
-    // 661
+    /**
+     * @Author：zhuangfei
+     * @Description：将字符串参数解析为第二个参数指定的基数的无符号整数。无符号整数将通常与负数关联的值映射
+     *                  到大于 @code 最大值的正数数字
+     * s ：字符串参数
+     * radix ：指定的基数
+     * PS：会抛出 NumberFormatException 数字格式异常
+     * @Date：13:52 2017/12/7
+     */
+    public static int parseUnsignedInt(String s, int radix) throws NumberFormatException {
+        if(s == null)
+            throw new NumberFormatException("null"); // 抛出，输入数据为空异常
+
+        int len = s.length();
+        if(len > 0) {
+            char firstChar = s.charAt(0);
+            if(firstChar == '-') {
+                throw new NumberFormatException(String.format("Illegal leading minus sign"
+                        + "on unsigned string %s.", s)); // 抛出，在无符号的字符串上非法引导'-'异常
+            } else {
+                if(len <= 5 || // integer的最大值在支持的最大进制下占6位字符
+                        (radix == 10 && len <= 9))  // integer的最大值在十进制下占10位字符
+                {
+                   return parseInt(s, radix);
+                } else {
+                    long ell = Long.parseLong(s, radix);
+                    if((ell & 0xffff_ffff_0000_0000L) == 0) {
+                        return (int) ell;
+                    } else {
+                        throw new NumberFormatException(String.format("String value %s exceeds range of unsigned int.", s));
+                        // 抛出，字符串的值超出整数范围异常
+                    }
+                }
+            }
+
+        } else {
+            throw NumberFormatException.forInputString(s);
+        }
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：将字符串参数解析为无符号的十进制整数。在字符串中的字符
+     *              必须都是十进制数字，除了第一个字符可以为ASCII加好。
+     *  s ：需要转换的字符串
+     *  PS：会抛出 NumberFormatException 数字格式异常
+     * @Date：14:14 2017/12/7
+     */
+    public static int parseUnsignedInt(String s) throws NumberFormatException {
+        return parseInt(s, 10);
+    }
+    
+    /**
+     * @Author：zhuangfei
+     * @Description：将指定字符串内容按照指定进制转换为Integer格式输出
+     * s ：需要转换的字符串
+     * PS：会抛出 NumberFormatException 数字格式异常
+     * @Date：14:17 2017/12/7
+     */
+    public static Integer valueOf(String s, int radix) throws NumberFormatException {
+        return Integer.valueOf(s, radix);
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：将指定的字符串按照10进制的格式转换为Integer输出
+     * s ：需要转换的字符串
+     * PS：会抛出 NumberFormatException 数字格式异常
+     * @Date：14:21 2017/12/7
+     */
+    public static Integer valueOf(String s) throws NumberFormatException {
+        return Integer.valueOf(s, 10);
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：缓存以支持自动装箱的对象标识语义
+     * @Date：14:32 2017/12/7
+     */
+    public static class IntegerCache {
+        static final int low = -128;
+        static final int high;
+        static final Integer cache[];
+
+        static {
+            // 高值可由属性配置
+            int h = 127;
+            String integerCacheHighPropValue = sun.misc.VM.getSavedProperty("java.lang.Integer.IntegerCache.high");
+            if(integerCacheHighPropValue != null) {
+                try {
+                    int i = parseInt(integerCacheHighPropValue);
+                    i = Math.min(i, 127);
+                    h = Math.min(i, Integer.MAX_VALUE - (low) -1);
+                } catch(NumberFormatException nfe) {
+
+                }
+            }
+            high = h;
+
+            cache = new Integer[(high - low) + 1];
+            int j = low;
+            for(int k = 0; k < cache.length; k++)
+                cache[k] = new Integer(j++);
+
+            assert IntegerCache.high >= 127;
+        }
+        private IntegerCache() {}
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：返回一个表示指定integer值的实例，如果不需要一个新的integer对象，那么这个方法
+     *              通常被使用到构造方法中，因为这个方法很可能通过缓存经常请求的值来获得更大的空间和时间性能
+     * i ：指定值
+     * @Date：14:38 2017/12/7
+     */
+    public static Integer valueOf(int i) {
+        if(i >= IntegerCache.low && i <= IntegerCache.high)
+            return IntegerCache.cache[i + (-IntegerCache.low)];
+        return new Integer(i);
+    }
+
+    private final int value;
+
+    /**
+     * @Author：zhuangfei
+     * @Description：初始化Integer
+     * value ：初始值
+     * @Date：14:39 2017/12/7
+     */
+    public Integer (int value) {
+        this.value = value;
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：将字符串值初始化为十进制的Integer类型
+     * s ：初始值
+     * PS ：会抛出 NumberFormatException 数字格式异常
+     * @Date：14:50 2017/12/7
+     */
+    public Integer(String s) throws NumberFormatException {
+        this.value = parseInt(s, 10);
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：将Integer的值作为byte值返回
+     * @Date：14:52 2017/12/7
+     */
+    public byte byteValue() {
+        return (byte) value;
+    }
+    
+    /**
+     * @Author：zhuangfei
+     * @Description：将Integer的值作为short值返回
+     * @Date：14:52 2017/12/7
+     */
+    public short shortValue() {
+        return (short) value;
+    }
+    
+    /**
+     * @Author：zhuangfei
+     * @Description：将Integer的值作为int值返回
+     * @Date：14:53 2017/12/7
+     */
+    public int intValue() {
+        return value;
+    }
+    
+    /**
+     * @Author：zhuangfei
+     * @Description：将Integer的值作为long值返回
+     * @Date：14:53 2017/12/7
+     */
+    public long longValue() {
+        return (long) value;
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：将Integer的值作为float值返回
+     * @Date：14:54 2017/12/7
+     */
+    public float floatValue() {
+        
+        return (float) value;
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：将Integer的值作为double值返回
+     * @Date：14:54 2017/12/7
+     */
+    public double doubleValue() {
+        return (double) value;
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：将使用此方法的对象转换为String格式返回
+     * @Date：14:57 2017/12/7
+     */
+    public String toString() {
+        return toString(value);
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：将调用此方法对象的哈希码返回
+     * @Date：14:58 2017/12/7
+     */
+    public int hashCode() {
+        return Integer.hashCode(value);
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：返回指定对象的哈希码
+     * value ： 指定对象
+     * @Date：15:00 2017/12/7
+     */
+    public static int hashCode(int value) {
+        return value;
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：返回对象与指定对象比较的结果，相同：true，不同：false
+     * @Date：15:02 2017/12/7
+     */
+    public boolean eqyals(Object obj) {
+        if(obj instanceof Integer)
+            return value == ((Integer)obj).intValue();
+        return false;
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：确定带有指定名称的系统属性的整数值。第一个参数为系统属性的名称，系统属性通过
+     *              System.getProperty()方法获得。然后将该属性的字符串值解析为一个使用deCode支持的语法和表示
+     *              该值的Integer对象的整数值
+     * nm ：系统属性
+     * @Date：15:05 2017/12/7
+     */
+    public static Integer getInteger(String nm) {
+        return getInteger(nm, null);
+    }
+    
+    /**
+     * @Author：zhuangfei
+     * @Description：确定带有指定名称的系统属性的整数值。第一个参数被视为系统属性的名称。系统属性用过
+     *              System.getProperty()方法获得。然后将该字符串值解析为一个使用deCode支持语法表示该值的整数值。
+     *              第二个参数是默认值，如果没有指定名称的属性，则返回第二个参数值的对象，如果该属性没有正确的数字
+     *              格式，或者指定的名称为空
+     * nm ：系统属性
+     * val ：默认值
+     * @Date：15:07 2017/12/7
+     */
+    public static Integer getInteger(String nm, int val) {
+        Integer result = getInteger(nm, null);
+        return (result == null) ? Integer.valueOf(val) : result;
+    }
+    
+    /**
+     * @Author：zhuangfei
+     * @Description：以指定的名称返回系统属性的整数值。第一个参数为系统属性的名称。系统属性通过
+     *                 System.getProperty()方法获得，然后将该属性的字符串值解析为一个整数值。如果属性值以
+     *                 两个ASCII字符 ‘0x’‘#’开头，而不是后面加‘-’，那么剩下的内容就会被解析为十六进制整数
+     * nm ：指定获取的系统属性
+     * val ：默认值
+     * @Date：15:10 2017/12/7
+     */
+    public static Integer getInteger(String nm, Integer val) {
+        String v = null;
+        try {
+            v = System.getProperty(nm);
+        } catch (IllegalArgumentException | NullPointerException e) {
+            
+        }
+        if(v != null) {
+            try {
+                return Integer.decode(v);
+            } catch (NullPointerException e) {
+                
+            }
+        }
+        return val;
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：将指定的字符串解码为Integer整数，按照十进制，十六进制和八进制。
+     *              在一个可选符号或说明符后面的字符会被解析为Integer格式，parseInt方法与指定
+     *              的基数(10进制，16进制或8进制)，这个字符序列必须表示一个正值，否则会抛出
+     *              NumberFormatException(数字格式异常)，如果指定的字符串的第一个字符是‘-’，
+     *              结果将被否定。在字符串中不允许使用空格字符
+     * PS：会抛出 NumberFormatException 数字格式异常
+     * @Date：15:31 2017/12/7
+     */
+    public static Integer decode (String nm) throws NumberFormatException {
+        int radix = 10;
+        int index = 0;
+        boolean negative = false;
+        Integer result;
+
+        if(nm.length() == 0)
+            throw new NumberFormatException("Zero length string"); // 抛出 字符串长度为0异常
+        char firstChar = nm.charAt(0);
+        // 如果标志存在，处理标志
+        if(firstChar == '-') {
+            negative = true;
+            index++;
+        } else if(firstChar == '+')
+            index++;
+        // 如果存在基数和说明符，处理它们
+        if(nm.startsWith("0x", index) || nm.startsWith("0X", index))  {
+            index += 2;
+            radix = 16;
+        } else if (nm.startsWith("#", index)) {
+            index++;
+            radix = 16;
+        } else if (nm.startsWith("0", index) && nm.length() > 1 + index) {
+            index++;
+            radix = 8;
+        }
+
+        if(nm.startsWith("-", index) || nm.startsWith("+", index)) {
+            throw new NumberFormatException("Sign character in wrong position");
+        }
+
+        try {
+            result = Integer.valueOf(nm.substring(index), radix);
+            result = negative ? Integer.valueOf(-result.intValue()) : result;
+        } catch (NumberFormatException e) {
+
+            String constant = negative ? ("-" + nm.substring(index)) : nm.substring(index);
+            result = Integer.valueOf(constant, radix);
+        }
+        return result;
+    }
+
+    // 1215
 
     @Override
     public int compareTo(Integer o) {
         return 0;
     }
 
-    @Override
-    public int intValue() {
-        return 0;
-    }
-
-    @Override
-    public long longValue() {
-        return 0;
-    }
-
-    @Override
-    public float floatValue() {
-        return 0;
-    }
-
-    @Override
-    public double doubleValue() {
-        return 0;
-    }
 }
