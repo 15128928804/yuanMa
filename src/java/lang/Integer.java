@@ -196,8 +196,6 @@ public class Integer extends Number implements Comparable<Integer> {
         return new String(buf, true);
     }
 
-    @Native public static final int SIZE = 32;
-
     /**
      * @Author：zhuangfei
      * @Description：返回指定的输入值的补充二进制中的最高阶(最左边)的0。如果指定的
@@ -710,11 +708,250 @@ public class Integer extends Number implements Comparable<Integer> {
         return result;
     }
 
-    // 1215
-
-    @Override
-    public int compareTo(Integer o) {
-        return 0;
+    /**
+     * @Author：zhuangfei
+     * @Description：比较输入对象和当前对象的值
+     * anotherInteger ：输入值
+     * @Date：17:29 2017/12/11
+     */
+    public int compareTo(Integer anotherInteger) {
+        return compare(this.value, anotherInteger.value);
     }
 
+    /**
+     * @Author：zhuangfei
+     * @Description：比较两个对象的值，相同返回0，不同返回1
+     * x ：值1
+     * y ：值2
+     * @Date：17:30 2017/12/11
+     */
+   public static int compare(int x, int y) {
+        return (x < y) ? -1:((x == y) ? 0 : 1);
+   }
+   
+   /**
+    * @Author：zhuangfei
+    * @Description：比较两个值以数字方式处理未签名的值，相同返回0，不同返回1
+    * x ：值1
+    * y ：值2
+    * @Date：17:33 2017/12/11
+    */
+   public static int compareUnsigned(int x, int y) {
+       return compare(x + MIN_VALUE, y + MIN_VALUE);
+   }
+
+   /**
+    * @Author：zhuangfei
+    * @Description：将参数转换为一个无符号的long类型的值。在无符号数字的转换中，高32位
+    *              为0，低32位等于int参数的比特位
+    * @Date：17:35 2017/12/11
+    */
+   public static long toUnsignedLong(int x) {
+       return ((long) x) & 0xffffffffL;
+   }
+   
+   /**
+    * @Author：zhuangfei
+    * @Description：返回无符号的值，由第一个参数除以第二个参数，得到无符号的值
+    * dividend ：值1
+    * divisor ：值2
+    * @Date：17:40 2017/12/11
+    */
+   public static int divideUnsigned(int dividend, int divisor) {
+       // 代替以往繁琐的代码，现在只使用这个长算法
+       return (int) (toUnsignedLong(dividend) / toUnsignedLong(divisor));
+   }
+
+   /**
+    * @Author：zhuangfei
+    * @Description：返回无符号的值，由第一个参数取余第二个参数，得到无符号的值
+    * dividend ：值1
+    * divisor ：值2
+    * @Date：17:44 2017/12/11
+    */
+    public static int remainderUnsigned(int dividend, int divisor) {
+       // 代替以往繁琐的代码，现在只使用这个长算法
+        return (int) (toUnsignedLong(dividend) % toUnsignedLong(divisor));
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：在两个二进制补码形式中用来表示int值的比特数
+     * @Date：17:46 2017/12/11
+     */
+    @Native public static final int SIZE = 32;
+
+    /**
+     * @Author：zhuangfei
+     * @Description：在两个二进制补码形式中用来表示int值的字节数
+     * @Date：17:48 2017/12/11
+     */
+    public static final int BYTES = SIZE / Byte.SIZE;
+    
+    /**
+     * @Author：zhuangfei
+     * @Description：在指定的i值中，以最高顺位('最左')一比特的位置返回一个int值。
+     *              如果指定的值在它两个辅助二进制表示法中没有，则返回0
+     * i ： 指定值
+     * @Date：17:50 2017/12/11
+     */
+    public static int highestOneBit(int i) {
+        i |= (i >> 1);
+        i |= (i >> 2);
+        i |= (i >> 4);
+        i |= (i >> 8);
+        i |= (i >> 16);
+        
+        return i - (i >>> 1);
+    }
+
+    /**
+     * @Author：zhuangfei
+     * @Description：在指定的i值中，以最低顺位('最右')一比特的位置返回一个int值。
+     *              如果指定的值在其2的补充二进制表示中只有1位，那么返回0
+     * i ：指定值
+     * @Date：17:53 2017/12/11
+     */
+    public static int lowestOneBit(int i) {
+        return i & -i;
+    }
+    
+    /**
+     * @Author：zhuangfei
+     * @Description：返回指定参数值的补充二进制表示中最低('最右')后面的零位置。
+     *               如果指定值在它两个补充表示中没有1位，或者它=0，返回32.
+     *  i ：指定值
+     * @Date：18:02 2017/12/11
+     */
+   public static int numberOfTrailingZeros(int i) {
+        int y;
+        if(i == 0)
+            return 32;
+        int n = 31;
+        y = i << 16; if(y != 0) {n = n - 16; i = y;}
+        y = i <<  8; if(y != 0) {n = n -  8; i = y;}
+        y = i <<  4; if(y != 0) {n = n -  4; i = y;}
+        y = i <<  2; if(y != 0) {n = n -  2; i = y;}
+        return n;
+   }
+
+   /**
+    * @Author：zhuangfei
+    * @Description：返回指定值的二进制二进制表示的一个位的数目
+    * i ： 指定值
+    * @Date：18:05 2017/12/11
+    */
+   public static int bitCount(int i) {
+       i = i - ((i >>> 1) & 0x55555555);
+       i = (i & 0x33333333) + ((i >>> 2) & 0x33333333);
+       i = (i + (i >>> 4)) & 0x0f0f0f0f;
+       i = i + (i >>> 8);
+       i = i + (i >>> 16);
+       return i & 0x3f;
+   }
+   
+   /**
+    * @Author：zhuangfei
+    * @Description：返回通过旋转两个二进制表示指定的int值的二进制表示的值。
+    *                 (位元从左手移出，或高阶，侧重新进入右边，或低阶。)
+    *  i ：值1
+    *  distance ：值2
+    * @Date：18:13 2017/12/11
+    */
+   public static int rotateLeft(int i, int distance) {
+       return (i << distance) | (i >>> -distance);
+   }
+   
+   /**
+    * @Author：zhuangfei
+    * @Description：返回通过旋转两个二进制指定的int值的二进制表示的值。
+    *               (位元从右手移出，或低阶，侧重新进入左边，或高阶。)
+    *  i ：值1
+    *  distance ：值2
+    * @Date：18:16 2017/12/11
+    */
+   public static int rotateRight(int i, int distance) {
+       return (i >>> distance) | (i << -distance);
+   }
+   
+   /**
+    * @Author：zhuangfei
+    * @Description：返回所获得的值，该值可以逆转二进制代码中指定的int值的二进制
+    *               表示形式中的位的顺序
+    *  i ：指定值
+    * @Date：18:18 2017/12/11
+    */
+   public static int reverse(int i) {
+       i = (i & 0x55555555) << 1 | (i >>> 1) & 0x55555555;
+       i = (i & 0x33333333) << 2 | (i >>> 2) & 0x33333333;
+       i = (i & 0x0f0f0f0f) << 4 | (i >>> 4) & 0x0f0f0f0f;
+       i = (i << 24) | ((i & 0xff00) << 8) |
+               ((i >>> 8) & 0xff00) | (i >>> 24);
+       return i;
+   }
+   
+   /**
+    * @Author：zhuangfei
+    * @Description：返回指定的int值的signum函数。(如果指定的值为负值，返回-1，
+    *                   如果指定值为正，则指定值为0)
+    * i ：指定值
+    * @Date：18:21 2017/12/11
+    */
+   public static int signum(int i) {
+       return (i >> 31 ) | (-i >>> 31);
+   }
+   
+   /**
+    * @Author：zhuangfei
+    * @Description：返回所获得的值，可以在指定的int值的补充表示中反转字节的顺序。
+    * i ：指定值
+    * @Date：18:25 2017/12/11
+    */
+   public static int reverseBytes(int i) {
+       return  ((i >>> 24)) | 
+               ((i >>  8) & 0xFF00) |
+               ((i <<  8) & 0xFF0000) |
+               ((i << 24));
+   }
+   
+   /**
+    * @Author：zhuangfei
+    * @Description：返回指定的两个int值的相加结果
+    * a ：值1
+    * b ：值2
+    * @Date：18:26 2017/12/11
+    */
+   public static int sum(int a, int b) {
+       return a + b;
+   }
+   
+   /**
+    * @Author：zhuangfei
+    * @Description：返回两个值中较大的一位。
+    * a ：值1
+    * b ：值2
+    * @Date：18:27 2017/12/11
+    */
+   public static int max(int a, int b) {
+       return Math.max(a, b);
+   }
+   
+   /**
+    * @Author：zhuangfei
+    * @Description：返回两个值中较小的一位。
+    * a ：值1
+    * b ：值2
+    * @Date：18:28 2017/12/11
+    */
+   public static int min(int a, int b) {
+       return Math.min(a, b);
+   }
+   
+   /**
+    * @Author：zhuangfei
+    * @Description：使用 JDK1.2中的serialVersionUID来实现互操作性
+    * @Date：18:29 2017/12/11
+    */
+   @Native private static final long serialVersionUID = 1360826667806852920L;
+   
 }
